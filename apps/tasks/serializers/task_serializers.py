@@ -4,8 +4,10 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from apps.projects.models import Project
+from apps.projects.serializers.project_serializers import ProjectShortInfoSerializer
 from apps.tasks.choices.priorities import Priorities
 from apps.tasks.models import Task, Tag
+from apps.tasks.serializers.tag_serializers import TagSerializer
 
 
 class ListTaskSerializer(serializers.ModelSerializer):
@@ -27,7 +29,7 @@ class ListTaskSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'status', 'priority', 'project', 'assignee', 'deadline']
 
 
-class CreateTaskSerializer(serializers.ModelSerializer):
+class CreateUpdateTaskSerializer(serializers.ModelSerializer):
     """
     Сериализатор для создания новой задачи.
     Включает валидацию и переопределенный метод create.
@@ -103,3 +105,38 @@ class CreateTaskSerializer(serializers.ModelSerializer):
         task.save() # Сохраняем (хотя .add() обычно сам сохраняет связь, явное save() не повредит)
 
         return task
+
+    # Метод update для обработки обновления существующей задачи
+    def update(self, instance: Task, validated_data) -> Task:
+        # Извлекаем теги из validated_data.
+        # Если теги не переданы в запросе на обновление, pop() вернет пустой список.
+        tags = validated_data.pop('tags', [])
+
+        # Обновляем все остальные поля экземпляра `Task`
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if tags:  # Если теги были переданы для обновления
+            instance.tags.set(tags)
+
+        instance.save()  # Сохраняем изменения в базу данных
+
+        return instance # Возвращаем обновленный экземпляр
+
+
+
+class DetailTaskSerializer(serializers.ModelSerializer):
+    """
+        Сериализатор для получения подробной информации о задаче.
+        Использует вложенные сериализаторы для project и tags.
+    """
+    # Вложенный сериализатор для проекта. Будет отображать id и name проекта.
+    project = ProjectShortInfoSerializer()
+    # Вложенный сериализатор для тегов. many=True, потому что тегов может быть много.
+    # read_only=True, так как мы не ожидаем, что через этот сериализатор будут меняться теги.
+    tags = TagSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Task
+        # Исключаем поля updated_at и deleted_at из вывода.
+        exclude = ('updated_at', 'deleted_at')

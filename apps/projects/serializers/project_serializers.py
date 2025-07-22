@@ -44,3 +44,13 @@ class DetailProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ('id', 'name', 'description', 'created_at', 'count_of_files')
+
+
+class ProjectShortInfoSerializer(serializers.ModelSerializer):
+    """
+    Краткий сериализатор для отображения информации о проекте.
+    Используется как вложенный сериализатор.
+    """
+    class Meta:
+        model = Project
+        fields = ('id', 'name')
