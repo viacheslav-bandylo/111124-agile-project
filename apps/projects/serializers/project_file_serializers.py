@@ -71,6 +71,3 @@ class CreateProjectFileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(  # Поднимаем исключение валидации
                 "File size is too large (2 MB as maximum)."
             )
-
-
-
